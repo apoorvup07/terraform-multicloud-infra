@@ -1,0 +1,5 @@
+project        = "myapp"
+gcp_project_id = "your-gcp-project-id"
+gcp_region     = "europe-west2"
+owner          = "platform-team"
+team           = "engineering"
