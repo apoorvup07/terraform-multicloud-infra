@@ -47,10 +47,12 @@ terraform-multicloud-infra/
 │   └── gcp/                  # GCP reusable module
 │       ├── main.tf
 │       ├── variables.tf
-│       └── outputs.tf
+│       ├── outputs.tf
+│       └── versions.tf
 ├── environments/
 │   ├── dev/                  # Dev environment (both clouds)
 │   │   ├── main.tf
+│   │   ├── variables.tf
 │   │   ├── aws.tfvars
 │   │   └── gcp.tfvars
 ├── .github/
@@ -85,21 +87,18 @@ gcloud auth application-default login
 export GOOGLE_PROJECT="your-project-id"
 ```
 
-### 2. Initialise and deploy dev environment
+### 2. Initialise and deploy the dev environment
+
+The dev root deploys **both** clouds in one plan, so it needs both variable files (and credentials for both):
 
 ```bash
 cd environments/dev
-
-# AWS
-terraform init -backend-config="bucket=your-tfstate-bucket"
-terraform plan -var-file="aws.tfvars"
-terraform apply -var-file="aws.tfvars"
-
-# GCP
-terraform init -backend-config="bucket=your-gcs-bucket"
-terraform plan -var-file="gcp.tfvars"
-terraform apply -var-file="gcp.tfvars"
+terraform init
+terraform plan  -var-file="aws.tfvars" -var-file="gcp.tfvars" -out=dev.tfplan
+terraform apply dev.tfplan
 ```
+
+Set `gcp_project_id` in `gcp.tfvars` first. To keep state remote, add a `backend "s3"` or `backend "gcs"` block and pass `-backend-config=...` to `terraform init`.
 
 ### 3. Verify cluster access
 
@@ -175,6 +174,9 @@ See `.github/workflows/` for full configuration.
 
 - EKS "spot" flag previously only added a `NO_SCHEDULE` taint (nodes stayed On-Demand and nothing could schedule on them); it now sets `capacity_type = "SPOT"`.
 - Dev had NAT disabled while nodes sit in private subnets, so nodes could not join the cluster; NAT is now on in dev.
+- The dev root referenced variables it never declared, so `terraform validate` failed; `environments/dev/variables.tf` now declares them.
+
+**Known gap:** the on-demand plan/apply workflows still plan each cloud separately with one var file; they need reworking for the single multi-cloud root (both var files and both sets of credentials).
 
 ## Licence
 
