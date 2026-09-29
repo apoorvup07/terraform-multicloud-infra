@@ -299,6 +299,8 @@ resource "aws_s3_bucket_lifecycle_configuration" "app" {
   rule {
     id     = "transition-to-ia"
     status = "Enabled"
+
+    filter {} # applies to every object in the bucket
     transition {
       days          = 30
       storage_class = "STANDARD_IA"

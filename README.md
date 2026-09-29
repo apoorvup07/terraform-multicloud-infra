@@ -174,6 +174,7 @@ See `.github/workflows/` for full configuration.
 
 - EKS "spot" flag previously only added a `NO_SCHEDULE` taint (nodes stayed On-Demand and nothing could schedule on them); it now sets `capacity_type = "SPOT"`.
 - Dev had NAT disabled while nodes sit in private subnets, so nodes could not join the cluster; NAT is now on in dev.
+- Cloud SQL used a private IP without private services access, so it could never be created; the module now reserves a peering range and creates the Service Networking connection (enable `servicenetworking.googleapis.com` in the project). `require_ssl`, removed in newer Google providers, is replaced by `ssl_mode = "ENCRYPTED_ONLY"`.
 - The dev root referenced variables it never declared, so `terraform validate` failed; `environments/dev/variables.tf` now declares them.
 
 **Known gap:** the on-demand plan/apply workflows still plan each cloud separately with one var file; they need reworking for the single multi-cloud root (both var files and both sets of credentials).

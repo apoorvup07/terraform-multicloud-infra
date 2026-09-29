@@ -167,6 +167,23 @@ resource "google_container_node_pool" "main" {
 # Cloud SQL — PostgreSQL (HA in prod)
 ###############################################################################
 
+# Private services access: Cloud SQL with a private IP needs a peering range
+# reserved in the VPC and a Service Networking connection before it can be created.
+resource "google_compute_global_address" "private_services" {
+  name          = "${local.name_prefix}-psa"
+  project       = var.project_id
+  purpose       = "VPC_PEERING"
+  address_type  = "INTERNAL"
+  prefix_length = 16
+  network       = google_compute_network.main.id
+}
+
+resource "google_service_networking_connection" "private_services" {
+  network                 = google_compute_network.main.id
+  service                 = "servicenetworking.googleapis.com"
+  reserved_peering_ranges = [google_compute_global_address.private_services.name]
+}
+
 resource "google_sql_database_instance" "main" {
   name             = "${local.name_prefix}-postgres"
   database_version = var.postgres_version
@@ -174,6 +191,7 @@ resource "google_sql_database_instance" "main" {
   project          = var.project_id
 
   deletion_protection = var.environment == "prod"
+  depends_on          = [google_service_networking_connection.private_services]
 
   settings {
     tier              = var.db_tier
@@ -188,7 +206,7 @@ resource "google_sql_database_instance" "main" {
     ip_configuration {
       ipv4_enabled    = false
       private_network = google_compute_network.main.id
-      require_ssl     = true
+      ssl_mode        = "ENCRYPTED_ONLY"
     }
 
     database_flags {
